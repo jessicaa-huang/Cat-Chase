@@ -2,6 +2,7 @@
 #mouse must try to escape the board to win.
 #mouse is controlled by the player (WASD keys to move)
 import random
+from collections import deque
 
 class catMouse:
     def __init__(self, width, height, mouseRow, mouseCol, catRow, catCol):
@@ -89,19 +90,46 @@ class catMouse:
             self.data[self.catRow][self.catCol] = '😺'
             self.data[self.catRow][self.catCol - 1] = '⬛'
 
+
     def catAImove(self):
         """ catAImove is how the cat decides to move when it's cat's turn
         """
-        if self.catRow == self.mouseRow:            #cat & mouse in SAME row
-            if self.catCol > self.mouseCol:         #cat is right of mouse
-                self.catmove('a')                    
-            else:                                   #cat is left of mouse
-                self.catmove('d')               #cat move to right if possible
-        elif self.catRow > self.mouseRow:           #cat is below mouse
-            self.catmove('w')                   #cat moves up if possible
-        else:                                       #cat is above mouse
-            self.catmove('s')   
-
+        # Create a visited matrix to keep track of visited cells
+        visited = [[False] * self.width for _ in range(self.height)]
+        queue = deque([(self.catRow, self.catCol, 0)])  # Initialize queue with cat's current position and level 0
+    
+        # Define directions for movement: up, down, left, right
+        directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+    
+        while queue:
+            row, col, level = queue.popleft()
+    
+            # Check if the current cell contains the mouse
+            if row == self.mouseRow and col == self.mouseCol:
+                # Move the cat towards the cell that the mouse was in at the end of the previous level
+                while level > 1:
+                    for drow, dcol in directions:
+                        if 0 <= row + drow < self.height and 0 <= col + dcol < self.width and visited[row + drow][col + dcol] == level - 1:
+                            row, col = row + drow, col + dcol
+                            level -= 1
+                            break
+    
+                # Move the cat to the cell adjacent to the mouse's current position
+                for drow, dcol in directions:
+                    if 0 <= row + drow < self.height and 0 <= col + dcol < self.width and visited[row + drow][col + dcol]:
+                        self.catRow, self.catCol = row + drow, col + dcol
+                        self.data[row + drow][col + dcol] = '😺'
+                        self.data[self.catRow - drow][self.catCol - dcol] = '⬛'
+                        return
+    
+            # Enqueue adjacent cells if they are not walls and not visited yet
+            for drow, dcol in directions:
+                new_row, new_col = row + drow, col + dcol
+                if 0 <= new_row < self.height and 0 <= new_col < self.width and not visited[new_row][new_col] and self.data[new_row][new_col] != '⬛':
+                    queue.append((new_row, new_col, level + 1))
+                    visited[new_row][new_col] = True
+     
+    
 
     def hostGame(self):
         '''hostGame runs the cat chase game! meow meow :)
